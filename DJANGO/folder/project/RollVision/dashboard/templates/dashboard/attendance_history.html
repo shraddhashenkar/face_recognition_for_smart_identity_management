@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ theme }}">
+
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RollVision - Attendance History</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/modern-style.css' %}">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    {% include 'dashboard/_sidebar.html' %}
+
+    <!-- ================= CONTENT ================= -->
+    <div class="content">
+        <h4 class="mb-4"><i class="fas fa-history me-2"></i>Attendance History</h4>
+
+        <!-- Stats Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card card-custom p-3">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-circle bg-primary me-3">
+                            <i class="fas fa-list"></i>
+                        </div>
+                        <div>
+                            <small class="text-muted">Total Records</small>
+                            <h5 class="fw-bold mb-0">{{ total_records }}</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card card-custom p-3">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-circle text-success me-3">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div>
+                            <small class="text-muted">Present</small>
+                            <h5 class="fw-bold mb-0">{{ present_count }}</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card card-custom p-3">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-circle text-info me-3">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div>
+                            <small class="text-muted">Face Recognition</small>
+                            <h5 class="fw-bold mb-0">{{ records|length }}</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters & Search -->
+        <div class="card card-custom p-3 mb-4">
+            <form method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Search Student</label>
+                    <input type="text" name="q" class="form-control" placeholder="Name or ID"
+                        value="{{ search_query }}">
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Date</label>
+                    <input type="date" name="date" class="form-control" value="{{ date_filter }}">
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Class</label>
+                    <select name="class" class="form-select">
+                        <option value="">All Classes</option>
+                        <option value="FE" {% if class_filter == 'FE' %}selected{% endif %}>FE</option>
+                        <option value="SE" {% if class_filter == 'SE' %}selected{% endif %}>SE</option>
+                        <option value="TE" {% if class_filter == 'TE' %}selected{% endif %}>TE</option>
+                        <option value="BE" {% if class_filter == 'BE' %}selected{% endif %}>BE</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search me-1"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Attendance Records Table -->
+        <div class="card card-custom p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5><i class="fas fa-table me-2"></i>Attendance Records</h5>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'export_attendance_pdf' %}?q={{ search_query }}&date={{ date_filter }}&class={{ class_filter }}"
+                        class="btn btn-sm btn-success">
+                        <i class="fas fa-download me-1"></i> Download PDF
+                    </a>
+                    <a href="{% url 'attendance_history' %}" class="btn btn-sm btn-secondary">
+                        <i class="fas fa-redo me-1"></i> Clear Filters
+                    </a>
+                </div>
+            </div>
+
+            {% if records %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Student ID</th>
+                            <th>Name</th>
+                            <th>Class</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Status</th>
+                            <th>Method</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in records %}
+                        <tr>
+                            <td><strong>{{ record.student.student_id }}</strong></td>
+                            <td>{{ record.student.name }}</td>
+                            <td><span class="badge bg-info">{{ record.student.class_year }}</span></td>
+                            <td>{{ record.date|date:"M d, Y" }}</td>
+                            <td>{{ record.time|time:"H:i" }}</td>
+                            <td>
+                                {% if record.status == 'present' %}
+                                <span class="badge bg-success">Present</span>
+                                {% elif record.status == 'absent' %}
+                                <span class="badge bg-danger">Absent</span>
+                                {% else %}
+                                <span class="badge bg-warning">Late</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if record.marked_by_face %}
+                                <span class="badge bg-primary">
+                                    <i class="fas fa-robot me-1"></i>Face Recognition
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary">Manual</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if total_records > 100 %}
+            <div class="alert alert-info mt-3">
+                <i class="fas fa-info-circle me-2"></i>
+                Showing first 100 records. Use filters to narrow down results.
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-inbox fa-3x mb-3"></i>
+                <p>No attendance records found</p>
+                <a href="{% url 'mark_attendance' %}" class="btn btn-primary">
+                    <i class="fas fa-video me-2"></i>Mark Attendance
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+
+</html>

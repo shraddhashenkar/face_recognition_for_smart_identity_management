@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ theme }}">
+
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RollVision - Live Attendance</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/modern-style.css' %}">
+
+    <style>
+        .detection-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+
+        .student-list-item {
+            transition: all 0.3s ease;
+        }
+
+        .student-list-item.marked {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ================= CONTENT ================= -->
+    <div class="container-fluid py-4">
+        <!-- Session Header -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card card-custom">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h4 class="mb-1">
+                                    <i class="fas fa-chalkboard-teacher me-2"></i>
+                                    {{ session.class_year }}-{{ session.division.name }} | {{ session.subject.name }}
+                                </h4>
+                                <p class="text-muted mb-0">
+                                    {{ session.lecture_period.name }} | {{ session.date|date:"M d, Y" }}
+                                </p>
+                            </div>
+                            <div>
+                                <button class="btn btn-danger btn-lg" onclick="endSession()" id="endSessionBtn">
+                                    <i class="fas fa-stop-circle me-2"></i>End Session
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card card-custom p-3">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-circle bg-primary me-3">
+                            <i class="fas fa-user-graduate"></i>
+                        </div>
+                        <div>
+                            <small class="text-muted">Total Students</small>
+                            <h5 class="fw-bold mb-0" id="totalStudents">{{ total_students }}</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card card-custom p-3">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-circle text-success me-3">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                        <div>
+                            <small class="text-muted">Present</small>
+                            <h5 class="fw-bold mb-0 text-success" id="presentCount">{{ present_count }}</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card card-custom p-3">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-circle text-danger me-3">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                        <div>
+                            <small class="text-muted">Attendance Rate</small>
+                            <h5 class="fw-bold mb-0" id="attendanceRate">
+                                {% widthratio present_count total_students 100 %}%
+                            </h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="row">
+            <!-- Camera Feed -->
+            <div class="col-md-8">
+                <div class="card card-custom p-4">
+                    <h5 class="mb-3">
+                        <i class="fas fa-camera me-2"></i>Live Face Detection
+                        <span class="badge bg-danger pulse" id="liveIndicator" style="display: none;">LIVE</span>
+                    </h5>
+
+                    <div class="text-center mb-3">
+                        <div class="position-relative d-inline-block">
+                            <video id="webcam" width="640" height="480" autoplay class="border rounded bg-dark"></video>
+                            <canvas id="detectionCanvas" class="detection-overlay" width="640" height="480"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="text-center mb-3">
+                        <button class="btn btn-success btn-lg me-2" id="startBtn" onclick="startContinuousDetection()">
+                            <i class="fas fa-play me-2"></i>Start Auto Detection
+                        </button>
+                        <button class="btn btn-warning btn-lg" id="pauseBtn" onclick="pauseDetection()"
+                            style="display: none;">
+                            <i class="fas fa-pause me-2"></i>Pause
+                        </button>
+                    </div>
+
+                    <div id="statusMessage" class="alert" style="display:none;"></div>
+
+                    <div class="card bg-light p-3">
+                        <h6 class="fw-bold mb-2"><i class="fas fa-info-circle me-2"></i>Detection Info</h6>
+                        <div class="row">
+                            <div class="col-12">
+                                <small class="text-muted">Status:</small>
+                                <p class="mb-0 fw-bold text-success">Continuous Detection Active</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student List -->
+            <div class="col-md-4">
+                <div class="card card-custom p-3" style="max-height: 700px; overflow-y: auto;">
+                    <h6 class="fw-bold mb-3 sticky-top bg-white py-2">
+                        <i class="fas fa-list me-2"></i>Student List
+                    </h6>
+
+                    <div id="studentList">
+                        {% for student in students %}
+                        <div class="student-list-item p-2 mb-2 border rounded {% if student.id in marked_students %}marked{% endif %}"
+                            data-student-id="{{ student.student_id }}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ student.name }}</strong><br>
+                                    <small class="text-muted">{{ student.student_id }} {% if student.roll_number %}|
+                                        Roll: {{ student.roll_number }}{% endif %}</small>
+                                </div>
+                                <div>
+                                    {% if student.id in marked_students %}
+                                    <i class="fas fa-check-circle text-success fa-lg"></i>
+                                    {% else %}
+                                    <i class="far fa-circle text-muted"></i>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- End Session Confirmation Modal -->
+    <div class="modal fade" id="endSessionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-stop-circle me-2"></i>End Session</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3">Are you sure you want to end this attendance session?</p>
+                    <div class="alert alert-warning mb-0">
+                        <strong>⚠️ This will:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Stop live face detection</li>
+                            <li>Mark all undetected students as absent</li>
+                            <li>Generate attendance summary report</li>
+                        </ul>
+                        <p class="mb-0 mt-2"><strong>You cannot resume this session after ending it.</strong></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmEndSessionBtn">
+                        <i class="fas fa-stop-circle me-1"></i> End Session
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Face Capture JavaScript -->
+    <script src="{% static 'js/face_capture.js' %}"></script>
+
+    <script>
+        const SESSION_ID = {{ session.id }};
+        let isDetecting = false;
+        let detectionInterval = null;
+        let countdownInterval = null;
+        let secondsRemaining = 3;
+
+        // Text-to-Speech Setup
+        const synth = window.speechSynthesis;
+        let lastSpokenTime = 0;
+        let lastSpokenId = null;
+
+        function speakName(text) {
+            const now = Date.now();
+            // Prevent spamming the same name (wait 5 seconds before repeating same person)
+            // or wait 2 seconds for different person
+            if (text === lastSpokenId && now - lastSpokenTime < 5000) return;
+            if (now - lastSpokenTime < 2000) return;
+
+            if (synth.speaking) {
+                console.log('Speech already in progress');
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance("Welcome " + text);
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+            synth.speak(utterance);
+
+            lastSpokenTime = now;
+            lastSpokenId = text;
+        }
+
+        function drawFaceBox(rect, name) {
+            const canvas = document.getElementById('detectionCanvas');
+            const video = document.getElementById('webcam');
+            const ctx = canvas.getContext('2d');
+
+            // Clear previous drawings
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (!rect) return;
+
+            // Rect comes as [x, y, w, h] from backend (matched to original image size)
+            // We need to scale it if video display size differs from capture size
+            // Typically capture size = video.videoWidth
+
+            // For now assuming 1:1 mapping if capture is from same video element
+            const x = rect[0];
+            const y = rect[1];
+            const w = rect[2];
+            const h = rect[3];
+
+            // Draw Box
+            ctx.strokeStyle = '#00ff00'; // Green
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x, y, w, h);
+
+            // Draw Name Background
+            ctx.fillStyle = '#00ff00';
+            const textWidth = ctx.measureText(name).width;
+            ctx.fillRect(x, y - 25, textWidth + 20, 25);
+
+            // Draw Name
+            ctx.fillStyle = '#000000';
+            ctx.font = '16px Arial';
+            ctx.fillText(name, x + 5, y - 7);
+        }
+
+
+        async function startContinuousDetection() {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'alert alert-info';
+            statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Starting camera...';
+
+            // Start webcam
+            const result = await faceCapture.startWebcam('webcam');
+
+            if (!result.success) {
+                statusDiv.className = 'alert alert-danger';
+                statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>' + result.message;
+                return;
+            }
+
+            // Start detection loop
+            isDetecting = true;
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('pauseBtn').style.display = 'inline-block';
+            document.getElementById('liveIndicator').style.display = 'inline-block';
+
+            statusDiv.className = 'alert alert-success';
+            statusDiv.innerHTML = '<i class="fas fa-check-circle me-2"></i>Auto-detection active! Students will be marked automatically.';
+
+            // Immediate first detection and loop
+            detectAndMark();
+        }
+
+        function pauseDetection() {
+            isDetecting = false;
+            if (detectionInterval) {
+                clearInterval(detectionInterval);
+                detectionInterval = null;
+            }
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+            faceCapture.stopWebcam();
+
+            document.getElementById('startBtn').style.display = 'inline-block';
+            document.getElementById('pauseBtn').style.display = 'none';
+            document.getElementById('liveIndicator').style.display = 'none';
+
+            // Clear canvas
+            const canvas = document.getElementById('detectionCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.className = 'alert alert-warning';
+            statusDiv.innerHTML = '<i class="fas fa-pause-circle me-2"></i>Detection paused. Click Start to resume.';
+        }
+
+
+
+        async function detectAndMark() {
+            if (!isDetecting) return;
+
+            try {
+                // Capture frame
+                const faceImage = faceCapture.captureFrame();
+                console.log('📸 Frame captured, length:', faceImage?.length);
+
+                // Send to backend
+                const csrftoken = getCSRFToken();
+                const response = await fetch('/api/auto-mark-attendance/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken,
+                    },
+                    body: JSON.stringify({
+                        session_id: SESSION_ID,
+                        face_image: faceImage
+                    })
+                });
+
+                const data = await response.json();
+                console.log('🔍 Detection response:', data);
+
+                if (data.success) {
+                    // Mark student in list
+                    markStudentPresent(data.student);
+
+                    // Update stats
+                    updateStats(data.session_stats);
+
+                    // Draw Box
+                    drawFaceBox(data.attendance.face_rect, data.student.name);
+
+                    // Audio Announcement
+                    speakName(data.student.name);
+
+                    // Show success notification (brief)
+                    showQuickNotification(data.student.name + ' marked present!', 'success');
+                } else {
+                    // Log failures for debugging
+                    console.log('⚠️ Detection failed:', data.message, 'Confidence:', data.confidence);
+                }
+                // Silently ignore failures (no face detected, already marked, etc.)
+
+            } catch (error) {
+                console.error('❌ Detection error:', error);
+                // Don't stop detection for errors
+            }
+
+            // LOOP: Request next frame after a small delay if still detecting
+            // This throttles requests to ~2 per second, preventing database overload
+            if (isDetecting) {
+                setTimeout(() => {
+                    requestAnimationFrame(detectAndMark);
+                }, 100); // 100ms delay = max 10 requests/second
+            }
+        }
+
+        function markStudentPresent(student) {
+            // student.student_id is the database ID from backend
+            const studentItem = document.querySelector(`[data-student-id="${student.student_id}"]`);
+            if (studentItem && !studentItem.classList.contains('marked')) {
+                studentItem.classList.add('marked');
+                const icon = studentItem.querySelector('i');
+                icon.className = 'fas fa-check-circle text-success fa-lg';
+
+                // Scroll to student
+                studentItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else if (!studentItem) {
+                console.warn('Student element not found:', student);
+            }
+        }
+
+        function updateStats(stats) {
+            document.getElementById('presentCount').textContent = stats.present_count;
+            const rate = Math.round((stats.present_count / stats.total_students) * 100);
+            document.getElementById('attendanceRate').textContent = rate + '%';
+        }
+
+        function showQuickNotification(message, type) {
+            // Brief top notification
+            const notif = document.createElement('div');
+            notif.className = `alert alert-${type} position-fixed top-0 start-50 translate-middle-x mt-3`;
+            notif.style.zIndex = '9999';
+            notif.innerHTML = '<i class="fas fa-check me-2"></i>' + message;
+            document.body.appendChild(notif);
+
+            setTimeout(() => notif.remove(), 2000);
+        }
+
+        // End session modal
+        let endSessionModal;
+
+        // Initialize modal on page load
+        document.addEventListener('DOMContentLoaded', function () {
+            endSessionModal = new bootstrap.Modal(document.getElementById('endSessionModal'));
+
+            // Handle confirm end session button
+            document.getElementById('confirmEndSessionBtn').addEventListener('click', async function () {
+                // Hide modal
+                endSessionModal.hide();
+
+                // Show loading state
+                const endBtn = document.getElementById('endSessionBtn');
+                const originalHtml = endBtn.innerHTML;
+                endBtn.disabled = true;
+                endBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Ending...';
+
+                const csrftoken = getCSRFToken();
+                try {
+                    const response = await fetch('/attendance/end-session/{{ session.id }}/', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrftoken,
+                        }
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        window.location.href = '/attendance/session/{{ session.id }}/summary/';
+                    } else {
+                        alert('Error ending session: ' + data.message);
+                        endBtn.disabled = false;
+                        endBtn.innerHTML = originalHtml;
+                    }
+                } catch (error) {
+                    alert('Error ending session: ' + error.message);
+                    endBtn.disabled = false;
+                    endBtn.innerHTML = originalHtml;
+                }
+            });
+        });
+
+        // Show end session confirmation modal
+        function endSession() {
+            endSessionModal.show();
+        }
+
+        function getCSRFToken() {
+            return getCookie('csrftoken');
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Auto-start detection on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('startBtn').click();
+            }, 1000);
+        });
+    </script>
+
+</body>
+
+</html>

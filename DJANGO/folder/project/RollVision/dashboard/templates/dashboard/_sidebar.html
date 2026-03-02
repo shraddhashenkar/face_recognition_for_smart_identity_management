@@ -1,0 +1,37 @@
+<!-- Reusable Sidebar Component -->
+<div class="sidebar">
+    <div class="text-center mb-4">
+        {% load static %}
+        <img src="{% static 'img/logo.png' %}" alt="RollVision Logo" class="img-fluid mb-2" style="max-height: 80px;">
+    </div>
+
+    <a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">
+        <i class="fas fa-home"></i>Dashboard
+    </a>
+
+    <a href="{% url 'faculty' %}" class="{% if request.resolver_match.url_name == 'faculty' %}active{% endif %}">
+        <i class="fas fa-chalkboard-teacher"></i>Faculty & Staff
+    </a>
+
+    <a href="{% url 'students' %}" class="{% if request.resolver_match.url_name == 'students' %}active{% endif %}">
+        <i class="fas fa-user-graduate"></i>Students
+    </a>
+
+    <a href="{% url 'start_attendance_session' %}"
+        class="{% if request.resolver_match.url_name == 'start_attendance_session' %}active{% endif %}">
+        <i class="fas fa-play-circle"></i>Start Attendance
+    </a>
+
+    <a href="{% url 'attendance_history' %}"
+        class="{% if request.resolver_match.url_name == 'attendance_history' %}active{% endif %}">
+        <i class="fas fa-history"></i>Attendance History
+    </a>
+
+    <a href="{% url 'reports' %}" class="{% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
+        <i class="fas fa-chart-bar"></i>Reports
+    </a>
+
+    <a href="{% url 'settings' %}" class="{% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
+        <i class="fas fa-cog"></i>Settings
+    </a>
+</div>

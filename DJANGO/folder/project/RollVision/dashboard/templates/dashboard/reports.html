@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RollVision - Reports</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/modern-style.css' %}">
+</head>
+
+<body>
+    <!-- Sidebar -->
+    {% include 'dashboard/_sidebar.html' %}
+
+    <!-- Content -->
+    <div class="content">
+        <!-- Page Header -->
+        <div class="mb-4">
+            <h2 class="text-gradient mb-2"><i class="fas fa-chart-bar me-2"></i>Reports & Analytics</h2>
+            <p class="text-muted">Generate and download attendance reports</p>
+        </div>
+
+        <!-- Quick Export Buttons -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card-custom p-4 text-center" style="cursor: pointer;" 
+                    onclick="location.href='{% url 'export_reports_pdf' %}?start_date={{ start_date|default:'' }}&end_date={{ end_date|default:'' }}&class_year={{ class_filter|default:'' }}&division={{ division_filter|default:'' }}'">
+                    <i class="fas fa-file-pdf fa-3x text-danger mb-3"></i>
+                    <h5>Export to PDF</h5>
+                    <p class="text-muted mb-0">Download attendance report as PDF</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card-custom p-4 text-center" style="cursor: pointer;"
+                    onclick="location.href='{% url 'export_reports_excel' %}?start_date={{ start_date|default:'' }}&end_date={{ end_date|default:'' }}&class_year={{ class_filter|default:'' }}&division={{ division_filter|default:'' }}'">
+                    <i class="fas fa-file-excel fa-3x text-success mb-3"></i>
+                    <h5>Export to Excel</h5>
+                    <p class="text-muted mb-0">Download as spreadsheet for analysis</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card-custom p-4 text-center" style="cursor: pointer;"
+                   onclick="location.href='{% url 'export_reports_csv' %}?start_date={{ start_date|default:'' }}&end_date={{ end_date|default:'' }}&class_year={{ class_filter|default:'' }}&division={{ division_filter|default:'' }}'">
+                   <i class="fas fa-file-csv fa-3x text-info mb-3"></i>
+                   <h5>Export to CSV</h5>
+                   <p class="text-muted mb-0">Download raw data in CSV format</p>
+                 </div>
+             </div>
+        </div>
+
+        <!-- Report Filters -->
+        <div class="card-custom p-4 mb-4">
+            <h5 class="mb-4"><i class="fas fa-filter me-2"></i>Filter Reports</h5>
+            <form method="GET">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Class Year</label>
+                        <select name="class_year" class="form-select">
+                            <option value="">All</option>
+                            <option value="FE" {% if class_filter == 'FE' %}selected{% endif %}>FE</option>
+                            <option value="SE" {% if class_filter == 'SE' %}selected{% endif %}>SE</option>
+                            <option value="TE" {% if class_filter == 'TE' %}selected{% endif %}>TE</option>
+                            <option value="BE" {% if class_filter == 'BE' %}selected{% endif %}>BE</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Start Date</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ start_date|default:'' }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">End Date</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ end_date|default:'' }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Division</label>
+                        <select name="division" class="form-select">
+                            <option value="">All</option>
+                            {% for div in divisions %}
+                            <option value="{{ div.id }}" {% if division_filter == div.id %}selected{% endif %}>{{ div.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-2"></i>Generate Report
+                        </button>
+                        <a href="{% url 'reports' %}" class="btn btn-secondary ms-2">
+                            <i class="fas fa-times me-2"></i>Clear
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Report Statistics Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="stat-card success">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="opacity-75 mb-1">Total Sessions</div>
+                            <h2 class="mb-0 fw-bold">{{ total_sessions|default:0 }}</h2>
+                        </div>
+                        <div class="icon-circle">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="opacity-75 mb-1">Total Students</div>
+                            <h2 class="mb-0 fw-bold">{{ total_students|default:0 }}</h2>
+                        </div>
+                        <div class="icon-circle">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card warning">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="opacity-75 mb-1">Avg Attendance</div>
+                            <h2 class="mb-0 fw-bold">{{ avg_attendance|default:0 }}%</h2>
+                        </div>
+                        <div class="icon-circle">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card danger">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="opacity-75 mb-1">Low Attendance</div>
+                            <h2 class="mb-0 fw-bold">{{ defaulters_count|default:0 }}</h2>
+                        </div>
+                        <div class="icon-circle">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sample Report Preview -->
+        <div class="card-custom p-4">
+            <h5 class="mb-4"><i class="fas fa-table me-2"></i>Report Preview</h5>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Class/Division</th>
+                            <th>Subject</th>
+                            <th>Period</th>
+                            <th>Total Students</th>
+                            <th>Present</th>
+                            <th>Absent</th>
+                            <th>Attendance %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if sessions %}
+                        {% for session in sessions %}
+                        <tr>
+                            <td>{{ session.date|date:"M d, Y" }}</td>
+                            <td>{{ session.class_year }}-{{ session.division.name }}</td>
+                            <td>{{ session.subject.code }}</td>
+                            <td>{{ session.lecture_period.name }}</td>
+                            <td>{{ session.total_students }}</td>
+                            <td><span class="badge bg-success">{{ session.present_count }}</span></td>
+                            <td><span class="badge bg-danger">{{ session.absent_count }}</span></td>
+                            <td><strong>{{ session.get_attendance_percentage }}%</strong></td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="fas fa-inbox fa-3x mb-3 d-block opacity-25"></i>
+                                <p>No reports data available. Generate attendance sessions to see reports.</p>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

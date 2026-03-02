@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ theme }}">
+
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RollVision - Start Attendance Session</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/modern-style.css' %}">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    {% include 'dashboard/_sidebar.html' %}
+
+    <!-- ================= CONTENT ================= -->
+    <div class="content">
+        <h4 class="mb-4"><i class="fas fa-play-circle me-2"></i>Start Attendance Session</h4>
+
+        <div class="row">
+            <!-- Start Session Form -->
+            <div class="col-md-8">
+                <div class="card card-custom p-4">
+                    <h5 class="mb-3"><i class="fas fa-clipboard-list me-2"></i>Session Configuration</h5>
+
+                    {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+
+                    <form method="POST" action="{% url 'start_attendance_session' %}">
+                        {% csrf_token %}
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Class Year *</label>
+                                {{ form.class_year }}
+                                {% if form.class_year.errors %}
+                                <div class="text-danger small">{{ form.class_year.errors }}</div>
+                                {% endif %}
+                            </div>
+                             
+                             <!-- Department (NEW) -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Department *</label>
+                                <select id="department" name="department" class="form-select" required>
+                                    <option value="">Select Department</option>
+
+                                    {% for d in departments %}
+                                        <option value="{{ d.id }}">{{ d.name }}</option>
+                                    {% endfor %}
+                                 </select>
+                            </div>
+                        
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Division *</label>
+                                {{ form.division }}
+                                {% if form.division.errors %}
+                                <div class="text-danger small">{{ form.division.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Subject *</label>
+                                {{ form.subject }}
+                                {% if form.subject.errors %}
+                                <div class="text-danger small">{{ form.subject.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Lecture Period *</label>
+                                {{ form.lecture_period }}
+                                {% if form.lecture_period.errors %}
+                                <div class="text-danger small">{{ form.lecture_period.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Session Notes (Optional)</label>
+                                {{ form.notes }}
+                                {% if form.notes.errors %}
+                                <div class="text-danger small">{{ form.notes.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            {% if form.non_field_errors %}
+                            <div class="col-12">
+                                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                            </div>
+                            {% endif %}
+
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary btn-lg w-100">
+                                    <i class="fas fa-play me-2"></i>Start Attendance Session
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Instructions:</strong> Select the class details and lecture period, then click Start to
+                        begin taking attendance with automatic face detection.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Sessions -->
+            <div class="col-md-4">
+                <div class="card card-custom p-3">
+                    <h6 class="fw-bold mb-3"><i class="fas fa-list-ul me-2"></i>Active Sessions Today</h6>
+
+                    {% if active_sessions %}
+                    <div class="list-group">
+                        {% for session in active_sessions %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">{{ session.class_year }}-{{ session.division.name }}</h6>
+                                    <small class="text-muted">
+                                        {{ session.subject.code }}<br>
+                                        {{ session.lecture_period.name }}
+                                    </small>
+                                </div>
+                                <span class="badge bg-success">Active</span>
+                            </div>
+                            <div class="mt-2">
+                                <a href="{% url 'mark_attendance_live' session.id %}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-video me-1"></i>Resume
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center my-3">
+                        <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                        No active sessions
+                    </p>
+                    {% endif %}
+                </div>
+
+                <div class="card card-custom p-3 mt-3 bg-light">
+                    <h6 class="fw-bold mb-2"><i class="fas fa-lightbulb me-2"></i>Tips</h6>
+                    <ul class="small mb-0">
+                        <li>Ensure students are registered with face encodings</li>
+                        <li>Camera will auto-detect and mark attendance</li>
+                        <li>You can pause/resume sessions anytime</li>
+                        <li>End session to generate attendance report</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+document.addEventListener("DOMContentLoaded", function () {
+    const deptSelect = document.getElementById("department");
+    const subjectSelect = document.getElementById("id_subject");
+    const yearSelect = document.getElementById("id_class_year");
+
+    function loadSubjects() {
+        const deptId = deptSelect.value;
+        const year = yearSelect.value;
+
+        // RESET subject dropdown EVERY time
+        subjectSelect.innerHTML = '<option value="">Select Subject</option>';
+
+        if (!deptId || !year) {
+            return; // do nothing if not selected
+        }
+
+        fetch(`/api/subjects/?department=${deptId}&class_year=${year}`, {
+            cache: "no-store"   // 🔥 prevents stale data
+        })
+        .then(res => res.json())
+        .then(data => {
+            data.forEach(sub => {
+                const opt = document.createElement("option");
+                opt.value = sub.id;
+                opt.textContent = sub.name;
+                subjectSelect.appendChild(opt);
+            });
+        })
+        .catch(err => console.error("Subject fetch error:", err));
+    }
+
+    // 🔥 trigger on BOTH changes
+    deptSelect.addEventListener("change", loadSubjects);
+    yearSelect.addEventListener("change", loadSubjects);
+});
+</script>
+
+</body>
+
+</html>

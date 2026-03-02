@@ -1,0 +1,108 @@
+/* ================= Base Styles ================= */
+body {
+    background-color: var(--bg-color, #f9fafb);
+    color: var(--text-color, #000);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.sidebar {
+    width: 250px;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    padding-top: 20px;
+    background-color: var(--sidebar-bg);
+    transition: background-color 0.3s ease;
+}
+
+.sidebar h3 {
+    margin-bottom: 30px;
+    color: var(--text-color);
+}
+
+.sidebar a {
+    display: block;
+    padding: 12px 20px;
+    color: var(--text-color);
+    text-decoration: none;
+    border-radius: 8px;
+    margin: 4px 10px;
+    font-weight: 500;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.sidebar a.active,
+.sidebar a:hover {
+    background-color: var(--link-hover-bg);
+    color: var(--link-hover-color);
+}
+
+.content {
+    margin-left: 260px;
+    padding: 20px;
+}
+
+.card,
+.card-custom {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+input,
+select,
+textarea {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid #ccc;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 2px solid var(--link-hover-bg);
+}
+
+/* ================= Light Theme ================= */
+:root[data-theme="light"] {
+    --bg-color: #ffffff;
+    --text-color: #000000;
+    --card-bg: #f8f9fa;
+    --sidebar-bg: #e5f1ff;
+    --link-hover-bg: #007bff;
+    --link-hover-color: #ffffff;
+}
+
+/* ================= Dark Theme ================= */
+:root[data-theme="dark"] {
+    --bg-color: #121212;
+    --text-color: #e0e0e0;
+    --card-bg: #1e1e1e;
+    --sidebar-bg: #1a1a1a;
+    --link-hover-bg: #0056b3;
+    --link-hover-color: #ffffff;
+}
+
+/* ================= Misc ================= */
+button {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.nav-tabs .nav-link {
+    color: var(--text-color);
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--text-color);
+    background-color: var(--card-bg);
+}
+
+textarea::placeholder,
+input::placeholder {
+    color: #888;
+}
